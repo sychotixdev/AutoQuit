@@ -1,35 +1,43 @@
-﻿using PoeHUD.Framework;
-using PoeHUD.Plugins;
-using PoeHUD.Poe;
-using PoeHUD.Poe.Components;
-using PoeHUD.Poe.RemoteMemoryObjects;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using Exile;
+using Exile.PoEMemory.MemoryObjects;
+using PoEMemory;
+using PoEMemory.Components;
+using Shared;
+using Shared.Attributes;
+using Shared.Enums;
+using Shared.Interfaces;
+using Shared.Nodes;
 
 namespace AutoQuit
 {
-    class AutoQuitCore : BaseSettingsPlugin<AutoQuitSettings>
+    public class AutoQuit: BaseSettingsPlugin<AutoQuitSettings>
     {
-        private readonly int errmsg_time = 10;
+        
+         private readonly int errmsg_time = 10;
         private ServerInventory flaskInventory = null;
 
-        public override void Initialise()
+        public override bool Initialise()
         {
-            PluginName = "AutoQuit";
-            this.OnAreaChange += AutoQuitCore_OnAreaChange;
-            base.Initialise();
+            Name = "AutoQuit";
+            Input.RegisterKey(Settings.forcedAutoQuit);
+            return true;
         }
 
-        private void AutoQuitCore_OnAreaChange(PoeHUD.Controllers.AreaController obj)
+        public override void AreaChange(AreaInstance area)
         {
             flaskInventory = GameController.Game.IngameState.ServerData.GetPlayerInventoryBySlot(InventorySlotE.Flask1);
         }
 
+      
+
         public void Quit()
         {
-            CommandHandler.KillTCPConnectionForProcess(API.GameController.Window.Process.Id);
+            CommandHandler.KillTCPConnectionForProcess(GameController.Window.Process.Id);
         }
 
         public override void Render()
@@ -37,7 +45,7 @@ namespace AutoQuit
             base.Render();
 
             // Panic Quit Key.
-            if (WinApi.IsKeyDown(Settings.forcedAutoQuit))
+            if (Input.IsKeyDown(Settings.forcedAutoQuit))
                 Quit();
 
             var LocalPlayer = GameController.Game.IngameState.Data.LocalPlayer;
@@ -165,9 +173,7 @@ namespace AutoQuit
             PathConnection.state = 12;
             var ptr = Marshal.AllocCoTaskMem(Marshal.SizeOf(PathConnection));
             Marshal.StructureToPtr(PathConnection, ptr, false);
-            SetTcpEntry(ptr);
-
-
+            var tcpEntry = SetTcpEntry(ptr);
         }
 
         [DllImport("iphlpapi.dll", SetLastError = true)]
@@ -207,5 +213,28 @@ namespace AutoQuit
             TcpTableOwnerModuleConnections,
             TcpTableOwnerModuleAll
         }
+    }
+    
+   public class AutoQuitSettings : ISettings
+    {
+        public AutoQuitSettings()
+        {
+            percentHPQuit = new RangeNode<float>(35f, 0f, 100f);
+            percentESQuit = new RangeNode<float>(35f, 0, 100);
+            forcedAutoQuit = new HotkeyNode(Keys.F4);
+        }
+
+        #region Auto Quit Menu
+        [Menu("Select key for Forced Quit", 1)]
+        public HotkeyNode forcedAutoQuit { get; set; }
+        [Menu("Min % Life to Auto Quit", 2)]
+        public RangeNode<float> percentHPQuit { get; set; }
+        [Menu("Min % ES Auto Quit", 3)]
+        public RangeNode<float> percentESQuit { get; set; }
+        [Menu("Quit if HP flasks are empty", 4)]
+        public ToggleNode emptyHPFlasks { get; set; } = new ToggleNode(false);
+        #endregion
+
+        public ToggleNode Enable { get; set; } = new ToggleNode(true);
     }
 }
