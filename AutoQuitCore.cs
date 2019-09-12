@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using Exile;
-using Exile.PoEMemory.MemoryObjects;
-using PoEMemory;
-using PoEMemory.Components;
-using Shared;
-using Shared.Attributes;
-using Shared.Enums;
-using Shared.Interfaces;
-using Shared.Nodes;
+using ExileCore;
+using ExileCore.PoEMemory.Components;
+using ExileCore.PoEMemory.MemoryObjects;
+using ExileCore.Shared.Attributes;
+using ExileCore.Shared.Enums;
+using ExileCore.Shared.Interfaces;
+using ExileCore.Shared.Nodes;
 
 namespace AutoQuit
 {
