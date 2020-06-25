@@ -35,7 +35,12 @@ namespace AutoQuit
 
         public void Quit()
         {
-            CommandHandler.KillTCPConnectionForProcess(GameController.Window.Process.Id);
+            var code = CommandHandler.KillTCPConnectionForProcess(GameController.Window.Process.Id);
+
+            if (code == 317)
+            {
+                LogError("AutoQuit: Run program from admin or set compatibility to Run as administrator");
+            }
         }
 
         public override void Render()
@@ -50,7 +55,7 @@ namespace AutoQuit
             var PlayerHealth = LocalPlayer.GetComponent<Life>();
             if (Settings.Enable && LocalPlayer.IsValid)
             {
-                if (Math.Round(PlayerHealth.HPPercentage, 3) * 100 < (Settings.percentHPQuit.Value))
+                if (Math.Round(PlayerHealth.HPPercentage, 3) * 100 < (Settings.percentHPQuit.Value) && PlayerHealth.CurHP != 0)
                 {
                     try
                     {
@@ -138,7 +143,7 @@ namespace AutoQuit
     // https://www.reddit.com/r/pathofexiledev/comments/787yq7/c_logout_app_same_method_as_lutbot/
     public static partial class CommandHandler
     {
-        public static void KillTCPConnectionForProcess(int ProcessId)
+        public static int KillTCPConnectionForProcess(int ProcessId)
         {
             MibTcprowOwnerPid[] table;
             var afInet = 2;
@@ -149,7 +154,7 @@ namespace AutoQuit
             {
                 ret = GetExtendedTcpTable(buffTable, ref buffSize, true, afInet, TcpTableClass.TcpTableOwnerPidAll);
                 if (ret != 0)
-                    return;
+                    return 0;
                 var tab = (MibTcptableOwnerPid)Marshal.PtrToStructure(buffTable, typeof(MibTcptableOwnerPid));
                 var rowPtr = (IntPtr)((long)buffTable + Marshal.SizeOf(tab.dwNumEntries));
                 table = new MibTcprowOwnerPid[tab.dwNumEntries];
@@ -172,6 +177,7 @@ namespace AutoQuit
             var ptr = Marshal.AllocCoTaskMem(Marshal.SizeOf(PathConnection));
             Marshal.StructureToPtr(PathConnection, ptr, false);
             var tcpEntry = SetTcpEntry(ptr);
+            return tcpEntry;
         }
 
         [DllImport("iphlpapi.dll", SetLastError = true)]
