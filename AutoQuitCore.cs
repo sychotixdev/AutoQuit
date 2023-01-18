@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -18,6 +18,7 @@ namespace AutoQuit
         
          private readonly int errmsg_time = 10;
         private ServerInventory flaskInventory = null;
+        private bool isInTownOrHideout = false;
 
         public override bool Initialise()
         {
@@ -29,6 +30,7 @@ namespace AutoQuit
         public override void AreaChange(AreaInstance area)
         {
             flaskInventory = GameController.Game.IngameState.ServerData.GetPlayerInventoryBySlot(InventorySlotE.Flask1);
+            isInTownOrHideout = area == null ? false : (area.IsTown || area.IsHideout);
         }
 
       
@@ -43,18 +45,30 @@ namespace AutoQuit
             }
         }
 
-        public override void Render()
+        public override Job Tick()
         {
-            base.Render();
-
             // Panic Quit Key.
             if (Input.IsKeyDown(Settings.forcedAutoQuit))
                 Quit();
 
+            if (!Settings.Enable) return null;
+
+            TickLogic();
+            return null;
+        }
+
+        private void TickLogic()
+        {
+            // Do not execute logic if we are in town/hideout
+            // This becomes a problem in Ruthless where health doesn't restore in towns
+            if (isInTownOrHideout)
+                return;
+
             var LocalPlayer = GameController.Game.IngameState.Data.LocalPlayer;
-            var PlayerHealth = LocalPlayer.GetComponent<Life>();
-            if (Settings.Enable && LocalPlayer.IsValid)
+            if (LocalPlayer.IsValid)
             {
+                var PlayerHealth = LocalPlayer.GetComponentFromMemory<Life>();
+
                 if (Math.Round(PlayerHealth.HPPercentage, 3) * 100 < (Settings.percentHPQuit.Value) && PlayerHealth.CurHP != 0)
                 {
                     try
@@ -90,6 +104,7 @@ namespace AutoQuit
                 }
             }
         }
+
         public bool gotCharges()
         {
             int charges = 0;
@@ -237,6 +252,8 @@ namespace AutoQuit
         public RangeNode<float> percentESQuit { get; set; }
         [Menu("Quit if HP flasks are empty", 4)]
         public ToggleNode emptyHPFlasks { get; set; } = new ToggleNode(false);
+        [Menu("Disable in town or hideout", 4)]
+        public ToggleNode disableInTownOrHideout { get; set; } = new ToggleNode(false);
         #endregion
 
         public ToggleNode Enable { get; set; } = new ToggleNode(false);
